@@ -11,7 +11,7 @@ Import the twitchIrcClientLib, instatiate a TwichIrcConnection and start the con
 ```python
 from TwitchIrcClient import twitchIrcClient as twitchirc
 
-#Instantiate the client with username and password
+#Instantiate the client with username and oauth-token
 irc = twitchirc.TwitchIrcClient('username','oauth:p4ssw0rd')
 
 #Define a message-reciever-function.
@@ -34,7 +34,13 @@ irc.join('channel')
 irc.sendprivmsg('channel','Kappa')
 ```
 
-### Reciever-functions
+### Notes about oauth-token
+Use the [Twitch-Oauth-Generator](https://twitchapps.com/tmi/) to create your oauth-token which is needed to connect to twitchIrc. **Copy the whole token**, with the `oauth:`-prefix.
+
+### Notes about `irc_test.py`
+To test the basic functionality of this library there is `irc_test.py`, but it needs a username, a oauth-token and a channel to join, which should **not** be public. This information is stored in `test-config.py`, which is not commited. If you want to run the test, copy `test-config-example.py`, rename the copy to `test-config.py` and replace the placeholders with your config.
+
+## Reciever-functions
 To recieve one of these events, write a function with the specific signature and add it to the specific `EventSpreader`, Attributes of the TwitchIrcClient-instance. Add a listener with add, as described in the example above.  
 Name of the `EventSpreader`s and their signature:
 
