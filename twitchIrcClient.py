@@ -6,7 +6,7 @@ import socket
 import threading
 import re
 
-tags_regex='(?P<tags>([-a-zA-Z0-9_]+=[^; \\\\\n\r]*;)*([-a-zA-Z0-9_]+=[^; \\\\\n\r]*))'
+tags_regex='(?P<tags>([-a-zA-Z0-9_]+=[^; \n\r]*;)*([-a-zA-Z0-9_]+=[^; \n\r]*))'
 username_regex='(?P<username>[a-zA-Z0-9_]+)!(?P=username)@(?P=username)'
 channel_regex='#(?P<channel>[a-zA-Z0-9_]+)'
 
@@ -108,26 +108,26 @@ class TwitchIrcClient:
         """
 
         #Create new Socket and connect to irc.twitch.tv
-        self._sock = socket.socket()
-        self.connect(kill_old=False)
-
-        #Authentication
-        self.authenticate(self.username, self.oauthtoken)
+        self._connect()
 
         #setup for recieving messages
         def reciever():
             self.go_on=True
+            self._restarting=False
             while self.go_on:
                 multidata = ''
                 try:
                     #If messages are too big fetch them in multidata
                     while not multidata or not multidata[-1]=='\n':
+                        if self._restarting:
+                            #during the restart of the socket, no messages can be recieved
+                            continue
                         gotdata=self._sock.recv(1024).decode('utf-8')
                         if len(gotdata)==0:
                             #Connection is lost, lets reconnect!
-                            self.connect()
+                            self.reconnect()
                         multidata+=gotdata
-                    #Twitch can send more messages than one at once, but the are linebreak-seperated
+                    #Twitch can send more messages than one at once, but they are linebreak-seperated
                     for data in multidata.split('\r\n'):
                         if not len(data):
                             continue
@@ -175,24 +175,41 @@ class TwitchIrcClient:
                     print('%serror occurred:%s'%(type(e),e))
         self.irc_reciever_thread = threading.Thread(target=reciever)
         self.irc_reciever_thread.start()
+        
+        #Set up authentication, tags, etc.
+        self._begin_connection()
 
-    def connect(self, kill_old=True):
+    def _kill_socket(self):
         """
-        Connects to the twitchIrc, authenticates and joines joined channels
-        Args:
-            kill_old (bool): If true (standard) kills the old socket, False is only for the start
+        Shutdown the socket, it can not longer be used
         """
-        if kill_old:
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
+        self._sock.shutdown(socket.SHUT_RDWR)
+        self._sock.close()
+
+    def _connect(self):
+        """
+        Connect a new socket to the irc
+        """
         self._sock = socket.socket()
         self._sock.connect(('irc.twitch.tv', 6667))
+            
+    def _begin_connection(self):
+        """
+        Start the conversation, requests capabilities and authenticate
+        """
         self.send('CAP REQ :twitch.tv/membership\r\n')
         self.send('CAP REQ :twitch.tv/commands\r\n')
         self.send('CAP REQ :twitch.tv/tags\r\n')
         self.authenticate(self.username, self.oauthtoken)
         for channel in self.joined_channels:
             self.join(channel)
+            
+    def reconnect(self):
+        self._restarting=True
+        self._kill_socket()
+        self._connect()
+        self._restarting=False
+        self._begin_connection()
 
     def authenticate(self, username, oauthtoken):
         """
