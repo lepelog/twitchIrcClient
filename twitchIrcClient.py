@@ -80,7 +80,7 @@ class TwitchIrcClient:
         Args:
             username (str): Your username to use for logging onto twitch
             oauthtoken (str): Your oauthtoken, retrieved from twitchTv
-             TODO explanation
+                See README.md for further information about oauth
         """
         self.username=username
         self.oauthtoken=oauthtoken
@@ -183,9 +183,9 @@ class TwitchIrcClient:
             self._sock.close()
         self._sock = socket.socket()
         self._sock.connect(('irc.twitch.tv', 6667))
-        self.send('CAP REQ :twitch.tv/membership\n')
-        self.send('CAP REQ :twitch.tv/commands\n')
-        self.send('CAP REQ :twitch.tv/tags\n')
+        self.send('CAP REQ :twitch.tv/membership\r\n')
+        self.send('CAP REQ :twitch.tv/commands\r\n')
+        self.send('CAP REQ :twitch.tv/tags\r\n')
         self.authenticate(self.username, self.oauthtoken)
         for channel in self.joined_channels:
             self.join(channel)
@@ -196,11 +196,11 @@ class TwitchIrcClient:
         Args:
             username (str): Your username to use for logging onto twitch
             oauthtoken (str): Your oauthtoken, retrieved from twitchTv
-             TODO explanation
+                See README.md for further information about oauth
         """
-        self.send('PASS %s\n' % oauthtoken)
-        self.send('NICK %s\n' % username)
-        self.send('USER %s %s %s :%s\n' % (username, username, username, username))
+        self.send('PASS %s\r\n' % oauthtoken)
+        self.send('NICK %s\r\n' % username)
+        self.send('USER %s %s %s :%s\r\n' % (username, username, username, username))
         
     def send(self, msg):
         """
