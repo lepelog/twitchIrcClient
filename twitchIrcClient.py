@@ -5,6 +5,7 @@ Twitch Client Library
 import socket
 import threading
 import re
+import time
 
 tags_regex='(?P<tags>([-a-zA-Z0-9_]+=[^; \n\r]*;)*([-a-zA-Z0-9_]+=[^; \n\r]*))'
 username_regex='(?P<username>[a-zA-Z0-9_]+)!(?P=username)@(?P=username)'
@@ -40,6 +41,9 @@ userstate_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv USERSTATE '+cha
 #Regex for globaluserstate
 globaluserstate_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv GLOBALUSERSTATE')
 
+#Regex for PONG from twitch
+pong_regex = re.compile('^:tmi.twitch.tv PONG tmi.twitch.tv :(?P<message>.*)$')
+
 def _deescape_tag(tag):
     #See IRCv3 Spec for escaping in tags
     return tag.replace('\\:',';').replace('\\s',' ').replace('\\r','\r').replace('\\n','\n').replace('\\\\','\\')
@@ -50,6 +54,7 @@ def _parse_tags(raw_tags):
         splittag = tag.split('=',1)
         tags[splittag[0]]=_deescape_tag(splittag[1])
     return tags
+
 
 class EventSpreader:
     """
@@ -114,6 +119,7 @@ class TwitchIrcClient:
         def reciever():
             self.go_on=True
             self._restarting=False
+            self._has_conversation=False
             while self.go_on:
                 multidata = ''
                 try:
@@ -126,6 +132,7 @@ class TwitchIrcClient:
                         if len(gotdata)==0:
                             #Connection is lost, lets reconnect!
                             self.reconnect()
+                        self._has_conversation=True
                         multidata+=gotdata
                     #Twitch can send more messages than one at once, but they are linebreak-seperated
                     for data in multidata.split('\r\n'):
@@ -168,16 +175,39 @@ class TwitchIrcClient:
                             if not globaluserstate_match is None:
                                 self._globaluserstaterecieved(globaluserstate_match)
                                 continue
-                            print('"'+data+'"')
+                            pong_match = pong_regex.match(data)
+                            if not pong_match is None:
+                                self._gotpong=True
+                                continue
+                            #print('"'+data+'"')
                 except KeyboardInterrupt:
                     self.go_on=False
                 except Exception as e:
                     print('%serror occurred:%s'%(type(e),e))
+        
+        def twitch_pinger():
+            while self.go_on:
+                time.sleep(5)
+                if not self._has_conversation:
+                    if not self.pingtest():
+                        self.reconnect()
+                self._has_conversation=False
+            
         self.irc_reciever_thread = threading.Thread(target=reciever)
         self.irc_reciever_thread.start()
         
+        self.twitch_pinger_thread = threading.Thread(target=twitch_pinger)
+        self.twitch_pinger_thread.start()
+        
         #Set up authentication, tags, etc.
         self._begin_connection()
+
+    def pingtest(self):
+        self._gotpong=False
+        tc=threading.Condition()
+        with tc:
+            self.send('PING me\r\n')
+            return tc.wait_for(lambda: self._gotpong,15)
 
     def _kill_socket(self):
         """
@@ -209,6 +239,7 @@ class TwitchIrcClient:
         self._kill_socket()
         self._connect()
         self._restarting=False
+        time.sleep(1)
         self._begin_connection()
 
     def authenticate(self, username, oauthtoken):
