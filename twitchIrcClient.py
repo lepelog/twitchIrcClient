@@ -44,6 +44,13 @@ def _deescape_tag(tag):
     #See IRCv3 Spec for escaping in tags
     return tag.replace('\\:',';').replace('\\s',' ').replace('\\r','\r').replace('\\n','\n').replace('\\\\','\\')
 
+def _parse_tags(raw_tags):
+    tags = {}
+    for tag in raw_tags.split(';'):
+        splittag = tag.split('=',1)
+        tags[splittag[0]]=_deescape_tag(splittag[1])
+    return tags
+
 class EventSpreader:
     """
     Helper to spread incomming events
@@ -151,17 +158,14 @@ class TwitchIrcClient:
                                 continue
                             clearchat_match = clearchat_regex.match(data)
                             if not clearchat_match is None:
-                                print('ccmatch')
                                 self._clearchatrecieved(clearchat_match)
                                 continue
                             userstate_match = userstate_regex.match(data)
                             if not userstate_match is None:
-                                print('ccmatch')
                                 self._userstaterecieved(userstate_match)
                                 continue
                             globaluserstate_match = globaluserstate_regex.match(data)
                             if not globaluserstate_match is None:
-                                print('ccmatch')
                                 self._globaluserstaterecieved(globaluserstate_match)
                                 continue
                             print('"'+data+'"')
@@ -231,14 +235,10 @@ class TwitchIrcClient:
         self.send('PART #%s\r\n'%channel)
 
     def _messagerecieved(self, match):
-        raw_tags = match.group('tags')
+        tags = _parse_tags(match.group('tags'))
         username = match.group('username')
         channel = match.group('channel')
         message = match.group('message')
-        tags = {}
-        for tag in raw_tags.split(';'):
-            splittag = tag.split('=',1)
-            tags[splittag[0]]=_deescape_tag(splittag[1])
         self.messagespreader.spread(username=username, channel=channel, tags=tags, message=message)
 
     def _joinrecieved(self, match):
@@ -252,47 +252,27 @@ class TwitchIrcClient:
         self.partspreader.spread(username=username,channel=channel)
         
     def _noticerecieved(self, match):
-        raw_tags = match.group('tags')
+        tags = _parse_tags(match.group('tags'))
         channel = match.group('channel')
         message = match.group('message')
-        tags = {}
-        for tag in raw_tags.split(';'):
-            splittag = tag.split('=',1)
-            tags[splittag[0]]=_deescape_tag(splittag[1])
         self.noticespreader.spread(channel=channel, message=message, tags=tags)
 
     def _roomstaterecieved(self, match):
-        raw_tags = match.group('tags')
+        tags = _parse_tags(match.group('tags'))
         channel = match.group('channel')
-        tags = {}
-        for tag in raw_tags.split(';'):
-            splittag = tag.split('=',1)
-            tags[splittag[0]]=_deescape_tag(splittag[1])
         self.roomstatespreader.spread(channel=channel, tags=tags)
         
     def _clearchatrecieved(self, match):
-        raw_tags = match.group('tags')
+        tags = _parse_tags(match.group('tags'))
         channel = match.group('channel')
         username = match.group('username')
-        tags = {}
-        for tag in raw_tags.split(';'):
-            splittag = tag.split('=',1)
-            tags[splittag[0]]=_deescape_tag(splittag[1])
         self.clearchatspreader.spread(channel=channel, tags=tags, username=username)
         
     def _userstaterecieved(self, match):
-        raw_tags = match.group('tags')
+        tags = _parse_tags(match.group('tags'))
         channel = match.group('channel')
-        tags = {}
-        for tag in raw_tags.split(';'):
-            splittag = tag.split('=',1)
-            tags[splittag[0]]=_deescape_tag(splittag[1])
         self.userstatespreader.spread(channel=channel, tags=tags)
         
     def _globaluserstaterecieved(self, match):
-        raw_tags = match.group('tags')
-        tags = {}
-        for tag in raw_tags.split(';'):
-            splittag = tag.split('=',1)
-            tags[splittag[0]]=_deescape_tag(splittag[1])
+        tags = _parse_tags(match.group('tags'))
         self.globaluserstatespreader.spread(tags=tags)
