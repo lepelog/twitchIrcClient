@@ -190,7 +190,7 @@ class TwitchIrcClient:
                 time.sleep(20)
                 if not self._has_conversation:
                     #Try pingtest 2 times, first might fail even if connection is alive
-                    if not self.pingtest()||not self.pingtest():
+                    if not self.pingtest() or not self.pingtest():
                         self.reconnect()
                 self._has_conversation=False
             
