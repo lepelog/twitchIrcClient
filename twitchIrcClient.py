@@ -187,9 +187,10 @@ class TwitchIrcClient:
         
         def twitch_pinger():
             while self.go_on:
-                time.sleep(5)
+                time.sleep(20)
                 if not self._has_conversation:
-                    if not self.pingtest():
+                    #Try pingtest 2 times, first might fail even if connection is alive
+                    if not self.pingtest()||not self.pingtest():
                         self.reconnect()
                 self._has_conversation=False
             
@@ -207,7 +208,7 @@ class TwitchIrcClient:
         tc=threading.Condition()
         with tc:
             self.send('PING me\r\n')
-            return tc.wait_for(lambda: self._gotpong,15)
+            return tc.wait_for(lambda: self._gotpong,20)
 
     def _kill_socket(self):
         """
