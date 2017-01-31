@@ -87,3 +87,4 @@ if __name__=='__main__':
     assert timeout[0]['ban-duration'] == '1'
     assert timeout[1] == totimeout
     print('all tests successfull!')
+    irc.shutdown()

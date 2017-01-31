@@ -188,6 +188,8 @@ class TwitchIrcClient:
         def twitch_pinger():
             while self.go_on:
                 time.sleep(20)
+                if not self.go_on:
+                    break
                 if not self._has_conversation:
                     #Try pingtest 2 times, first might fail even if connection is alive
                     if not self.pingtest() or not self.pingtest():
@@ -242,6 +244,11 @@ class TwitchIrcClient:
         self._restarting=False
         time.sleep(1)
         self._begin_connection()
+        
+    def shutdown(self):
+        self._restarting=True
+        self.go_on=False
+        self._kill_socket()
 
     def authenticate(self, username, oauthtoken):
         """
