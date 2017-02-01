@@ -56,6 +56,9 @@ Name of the `EventSpreader`s and their signature:
 **roomstatespreader**: Used if you join a channel or if the roomstate changes in a channel you are joined in:  
 `channel, tags`
 
+**usernoticespreader**: Used if  a user resubscribes:  
+`channel, tags, message`
+
 **noticespreader**: Used if twitch sends a notification:  
 `channel, tags, message`
 

@@ -18,7 +18,8 @@ channel_regex='#(?P<channel>[a-zA-Z0-9_]+)'
 #Followed by #channelname
 #Followed by :Message
 #Groups: tags, channel, username, message
-privmsg_regex = re.compile('^@'+tags_regex+' :'+username_regex+r'\.tmi\.twitch\.tv PRIVMSG '+channel_regex+' :(?P<message>.*)$')
+#Note: messages send by twitchnotify don't contain tags, an empty dict will be returned!
+privmsg_regex = re.compile('^(@'+tags_regex+' )?:'+username_regex+r'\.tmi\.twitch\.tv PRIVMSG '+channel_regex+' :(?P<message>.*)$')
 
 #Regex for user joining the channel:
 join_regex = re.compile('^:'+username_regex+r'\.tmi\.twitch\.tv JOIN '+channel_regex+' *$')
@@ -28,6 +29,9 @@ part_regex = re.compile('^:'+username_regex+r'\.tmi\.twitch\.tv PART '+channel_r
 
 #Regex for twitch notice messages:
 notice_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv NOTICE '+channel_regex+' :(?P<message>.*)$')
+
+#Regex for usernotice messages, used for resubscribers, the message is optional:
+usernotice_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv USERNOTICE '+channel_regex+'( :(?P<message>.*))?$')
 
 #Regex for roomstate_change
 roomstate_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv ROOMSTATE '+channel_regex+'$')
@@ -101,6 +105,7 @@ class TwitchIrcClient:
         self.joinspreader = EventSpreader()
         self.partspreader = EventSpreader()
         self.noticespreader = EventSpreader()
+        self.usernoticespreader = EventSpreader()
         self.roomstatespreader = EventSpreader()
         self.clearchatspreader = EventSpreader()
         self.userstatespreader = EventSpreader()
@@ -136,50 +141,7 @@ class TwitchIrcClient:
                         multidata+=gotdata
                     #Twitch can send more messages than one at once, but they are linebreak-seperated
                     for data in multidata.split('\r\n'):
-                        if not len(data):
-                            continue
-                        elif data.startswith('PING'):
-                            #Respond to PING, looses connection otherwise
-                            self.send(data.replace('PING','PONG'))
-                        else:
-                            #Try to match regular expressions!
-                            msg_match = privmsg_regex.match(data)
-                            if not msg_match is None:
-                                self._messagerecieved(msg_match)
-                                continue
-                            join_match = join_regex.match(data)
-                            if not join_match is None:
-                                self._joinrecieved(join_match)
-                                continue
-                            part_match = part_regex.match(data)
-                            if not part_match is None:
-                                self._partrecieved(part_match)
-                                continue
-                            notice_match = notice_regex.match(data)
-                            if not notice_match is None:
-                                self._noticerecieved(notice_match)
-                                continue
-                            roomstate_match = roomstate_regex.match(data)
-                            if not roomstate_match is None:
-                                self._roomstaterecieved(roomstate_match)
-                                continue
-                            clearchat_match = clearchat_regex.match(data)
-                            if not clearchat_match is None:
-                                self._clearchatrecieved(clearchat_match)
-                                continue
-                            userstate_match = userstate_regex.match(data)
-                            if not userstate_match is None:
-                                self._userstaterecieved(userstate_match)
-                                continue
-                            globaluserstate_match = globaluserstate_regex.match(data)
-                            if not globaluserstate_match is None:
-                                self._globaluserstaterecieved(globaluserstate_match)
-                                continue
-                            pong_match = pong_regex.match(data)
-                            if not pong_match is None:
-                                self._gotpong=True
-                                continue
-                            #print('"'+data+'"')
+                        self._handle_incomming(data)
                 except KeyboardInterrupt:
                     self.go_on=False
                 except Exception as e:
@@ -290,8 +252,63 @@ class TwitchIrcClient:
         self.joined_channels.discard(channel)
         self.send('PART #%s\r\n'%channel)
 
+    def _handle_incomming(self, data):
+        if not len(data):
+            return
+        elif data.startswith('PING'):
+            #Respond to PING, looses connection otherwise
+            self.send(data.replace('PING','PONG'))
+        else:
+            #Try to match regular expressions!
+            msg_match = privmsg_regex.match(data)
+            if not msg_match is None:
+                self._messagerecieved(msg_match)
+                return
+            join_match = join_regex.match(data)
+            if not join_match is None:
+                self._joinrecieved(join_match)
+                return
+            part_match = part_regex.match(data)
+            if not part_match is None:
+                self._partrecieved(part_match)
+                return
+            notice_match = notice_regex.match(data)
+            if not notice_match is None:
+                self._noticerecieved(notice_match)
+                return
+            usernotice_match = usernotice_regex.match(data)
+            if not usernotice_match is None:
+                self._usernoticerecieved(usernotice_match)
+                return
+            roomstate_match = roomstate_regex.match(data)
+            if not roomstate_match is None:
+                self._roomstaterecieved(roomstate_match)
+                return
+            clearchat_match = clearchat_regex.match(data)
+            if not clearchat_match is None:
+                self._clearchatrecieved(clearchat_match)
+                return
+            userstate_match = userstate_regex.match(data)
+            if not userstate_match is None:
+                self._userstaterecieved(userstate_match)
+                return
+            globaluserstate_match = globaluserstate_regex.match(data)
+            if not globaluserstate_match is None:
+                self._globaluserstaterecieved(globaluserstate_match)
+                return
+            pong_match = pong_regex.match(data)
+            if not pong_match is None:
+                self._gotpong=True
+                return
+            #print('"'+data+'"')
+
     def _messagerecieved(self, match):
-        tags = _parse_tags(match.group('tags'))
+        #Twtichnotify doesnt't send tags, empty dicct is returned cause it's easier to deal with
+        raw_tags = match.group('tags')
+        if raw_tags is None:
+            tags={}
+        else:
+            tags=_parse_tags(raw_tags)
         username = match.group('username')
         channel = match.group('channel')
         message = match.group('message')
@@ -311,6 +328,15 @@ class TwitchIrcClient:
         tags = _parse_tags(match.group('tags'))
         channel = match.group('channel')
         message = match.group('message')
+        self.noticespreader.spread(channel=channel, message=message, tags=tags)
+
+    def _usernoticerecieved(self, match):
+        tags = _parse_tags(match.group('tags'))
+        channel = match.group('channel')
+        message = match.group('message')
+        #no resubcription message:
+        if message is None:
+            message = ''
         self.noticespreader.spread(channel=channel, message=message, tags=tags)
 
     def _roomstaterecieved(self, match):
