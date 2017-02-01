@@ -71,4 +71,7 @@ Name of the `EventSpreader`s and their signature:
 **userstatespreader**: Used if you join a channel, informs about your state in the channel:    
 `channel, tags`
 
-See [Twtich IRC documentation](https://github.com/justintv/Twitch-API/blob/master/IRC.md#tags) for more information.
+**hostspreader**: Used if the joined channel starts/stops hosting another channel:  
+`channel`, `target`, `viewers`
+
+See [Twtich IRC documentation](https://github.com/justintv/Twitch-API/blob/master/IRC.md) for more information.
