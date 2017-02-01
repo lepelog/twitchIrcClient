@@ -177,3 +177,21 @@ class RegexTest(unittest.TestCase):
             self.irc._handle_incomming(msg)
         except ExpectedException as e:
             self.assertEqual(e.message,'PONG tmi.twitch.tv')
+            
+    def testHOST1(self):
+        hostlistener=listenerbuilder(self, channel='hosting_channel', target='target_channel', viewers='42')
+        self.irc.hostspreader.add(hostlistener)
+        msg=':tmi.twitch.tv HOSTTARGET #hosting_channel :target_channel 42'
+        try:
+            self.irc._handle_incomming(msg)
+        finally:
+            self.irc.hostspreader.remove(hostlistener)
+            
+    def testHOST2(self):
+        hostlistener=listenerbuilder(self, channel='hosting_channel', target='-', viewers='42')
+        self.irc.hostspreader.add(hostlistener)
+        msg=':tmi.twitch.tv HOSTTARGET #hosting_channel :- 42'
+        try:
+            self.irc._handle_incomming(msg)
+        finally:
+            self.irc.hostspreader.remove(hostlistener)

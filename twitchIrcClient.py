@@ -45,6 +45,9 @@ userstate_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv USERSTATE '+cha
 #Regex for globaluserstate
 globaluserstate_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv GLOBALUSERSTATE')
 
+#Regex for hosting
+host_regex = re.compile(r'^:tmi\.twitch\.tv HOSTTARGET '+channel_regex+' :(?P<target>-|[a-zA-Z0-9_]+) (?P<viewers>[0-9]+)$')
+
 #Regex for PONG from twitch
 pong_regex = re.compile('^:tmi.twitch.tv PONG tmi.twitch.tv :(?P<message>.*)$')
 
@@ -110,6 +113,7 @@ class TwitchIrcClient:
         self.clearchatspreader = EventSpreader()
         self.userstatespreader = EventSpreader()
         self.globaluserstatespreader = EventSpreader()
+        self.hostspreader = EventSpreader()
 
     def create_connection(self):
         """
@@ -296,6 +300,10 @@ class TwitchIrcClient:
             if not globaluserstate_match is None:
                 self._globaluserstaterecieved(globaluserstate_match)
                 return
+            host_match = host_regex.match(data)
+            if not host_match is None:
+                self._hostrecieved(host_match)
+                return
             pong_match = pong_regex.match(data)
             if not pong_match is None:
                 self._gotpong=True
@@ -358,3 +366,9 @@ class TwitchIrcClient:
     def _globaluserstaterecieved(self, match):
         tags = _parse_tags(match.group('tags'))
         self.globaluserstatespreader.spread(tags=tags)
+        
+    def _hostrecieved(self, match):
+        channel=match.group('channel')
+        target=match.group('target')
+        viewers=match.group('viewers')
+        self.hostspreader.spread(channel=channel, target=target, viewers=viewers)
