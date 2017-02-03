@@ -2,7 +2,10 @@
 Fully written in Python3
 
 ##Installation
-Change to this directory and execute `python3 setup.py install`.
+Change to this directory and execute `python3 setup.py install`.  
+If you don't have root-priveleges and/or want to install the package just for yourself, use `python3 setup.py --user` instead.
+
+To uninstall this package with pip run `pip3 uninstall twitchircclient`
 
 ##Features
 - Joining/Parting multiple channels
