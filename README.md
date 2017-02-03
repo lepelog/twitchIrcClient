@@ -1,18 +1,21 @@
 # Simple TwitchIRC-Client
 Fully written in Python3
 
+##Installation
+Change to this directory and execute `python3 setup.py install`.
+
 ##Features
 - Joining/Parting multiple channels
 - Reading/Sending messages
 - Catching Events such as people joining/parting, roomstate changes, twitch notices etc.
 
 ##Usage
-Import the twitchIrcClientLib, instatiate a TwichIrcConnection and start the connection. Example:
+Import the TwitchIrcClient from twitchircclient and start the connection. Example:
 ```python
-from TwitchIrcClient import twitchIrcClient as twitchirc
+from twitchircclient import TwitchIrcClient
 
 #Instantiate the client with username and oauth-token
-irc = twitchirc.TwitchIrcClient('username','oauth:p4ssw0rd')
+irc = TwitchIrcClient('username','oauth:p4ssw0rd')
 
 #Define a message-reciever-function.
 #Signatures for each listener are described below

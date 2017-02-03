@@ -1,7 +1,7 @@
 #!/bin/python3
 
 import unittest
-from twitchIrcClient import TwitchIrcClient
+from twitchircclient import TwitchIrcClient
 
 class ExpectedException(Exception):
     

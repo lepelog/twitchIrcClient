@@ -1,5 +1,5 @@
 #!/bin/python3
-from twitchIrcClient import TwitchIrcClient
+from twitchircclient import TwitchIrcClient
 import time
 from test_config import *
 
