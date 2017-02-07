@@ -130,21 +130,24 @@ class TwitchIrcClient:
             self._restarting=False
             self._has_conversation=False
             while self.go_on:
-                multidata = ''
+                #Messages from the socket are raw bytes
+                multidata = bytes()
                 try:
-                    #If messages are too big fetch them in multidata
-                    while not multidata or not multidata[-1]=='\n':
+                    #If messages are too big fetch them in multidata. The end of a message is always a newline
+                    while not multidata or not multidata.endswith(b'\n'):
                         if self._restarting:
                             #during the restart of the socket, no messages can be recieved
                             continue
-                        gotdata=self._sock.recv(1024).decode('utf-8')
+                        #direct decoding might fail on long non-ascii messages
+                        gotdata=self._sock.recv(1024)
                         if len(gotdata)==0:
                             #Connection is lost, lets reconnect!
                             self.reconnect()
                         self._has_conversation=True
                         multidata+=gotdata
                     #Twitch can send more messages than one at once, but they are linebreak-seperated
-                    for data in multidata.split('\r\n'):
+                    decoded = multidata.decode('utf-8')
+                    for data in decoded.split('\r\n'):
                         self._handle_incomming(data)
                 except KeyboardInterrupt:
                     self.go_on=False
