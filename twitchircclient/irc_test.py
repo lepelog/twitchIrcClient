@@ -26,6 +26,9 @@ def globaluserstatelistener(tags):
 
 def userstatelistener(channel, tags):
     print('!USERSTATE in %s:\n%s'%(channel,tags))
+    
+def hostlistener(channel, target, viewers):
+    print('!HOST\n%s hosts %s with %s viewer(s)'%(channel, target,viewers))
 
 if __name__=='__main__':
     irc = TwitchIrcClient(username,oauth_token)            
@@ -37,5 +40,6 @@ if __name__=='__main__':
     irc.clearchatspreader.add(clearchatlistener)
     irc.userstatespreader.add(userstatelistener)
     irc.globaluserstatespreader.add(globaluserstatelistener)
+    irc.hostspreader.add(hostlistener)
     irc.create_connection()
     irc.join(channel)
