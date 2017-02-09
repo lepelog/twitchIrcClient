@@ -2,9 +2,16 @@
 Fully written in Python3
 
 ##Installation
-Change to this directory and execute `python3 setup.py install`.  
-If you don't have root-privileges and/or want to install the package just for yourself, use `python3 setup.py install --user` instead.
+###From github
+Run `pip3 install https://github.com/lepelog/twitchIrcClient/archive/master.zip`
 
+###From source
+Clone the Repository, change to this directory and execute `python3 setup.py install`.
+
+###Local installation
+If you don't have root-privileges and/or want to install the package just for yourself, use the `--user`-Flag at the end of the command.
+
+###Uninstall
 To uninstall this package with pip run `pip3 uninstall twitchircclient`
 
 ##Features
