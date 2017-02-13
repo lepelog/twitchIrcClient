@@ -152,7 +152,10 @@ class TwitchIrcClient:
                 except KeyboardInterrupt:
                     self.go_on=False
                 except Exception as e:
-                    print('%serror occurred:%s'%(type(e),e))
+                    if self._restarting:
+                        pass #Restarting the socket causes an exception, which can be ignored
+                    else:
+                        print('%s error occurred:%s'%(type(e),e))
         
         def twitch_pinger():
             while self.go_on:
