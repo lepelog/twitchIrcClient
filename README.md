@@ -18,6 +18,7 @@ To uninstall this package with pip run `pip3 uninstall twitchircclient`
 - Joining/Parting multiple channels
 - Reading/Sending messages
 - Catching Events such as people joining/parting, roomstate changes, twitch notices etc.
+- Sending/Recieving Whisper-messages
 
 ##Usage
 Import the TwitchIrcClient from twitchircclient and start the connection. Example:
@@ -59,6 +60,9 @@ Name of the `EventSpreader`s and their signature:
 
 **messagespreader**: Used if a user sends a message in a channel you are joined in:  
 `channel, username, tags, message`
+
+**whisperspreader**: Used if a user whispers a message directly to you:  
+`username, tags, message`
 
 **joinspreader**: Used if a user joins a channel you are joined in:  
 `channel, username`

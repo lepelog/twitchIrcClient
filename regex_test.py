@@ -195,3 +195,13 @@ class RegexTest(unittest.TestCase):
             self.irc._handle_incomming(msg)
         finally:
             self.irc.hostspreader.remove(hostlistener)
+
+    def testWHISPER(self):
+        tags={'badges':'','color':'#FF0000','display-name':'UserName','emotes':'','message-id':'3','thread-id':'123456789_123456789','turbo':'0','user-id':'123456789','user-type':''}
+        whisperlistener=listenerbuilder(self, username='username', message='hi', tags=tags)
+        self.irc.whisperspreader.add(whisperlistener)
+        msg='@badges=;color=#FF0000;display-name=UserName;emotes=;message-id=3;thread-id=123456789_123456789;turbo=0;user-id=123456789;user-type= :username!username@username.tmi.twitch.tv WHISPER channel :hi'
+        try:
+            self.irc._handle_incomming(msg)
+        finally:
+            self.irc.whisperspreader.remove(whisperlistener)

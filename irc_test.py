@@ -6,6 +6,9 @@ from test_config import *
 def messagelistener(channel, username, tags, message):
     print('\nuser:%s\nchannel:%s\ntags:%s\nmessage:"%s"'%(username,channel,tags,message))
 
+def whisperlistener(username, tags, message):
+    print('\n%s WHISPERED:\nmessage:"%s"\ntags:%s'%(username,message,tags))
+
 def joinlistener(channel, username):
     print('<%s joined %s>'%(username, channel))
 
@@ -33,6 +36,7 @@ def hostlistener(channel, target, viewers):
 if __name__=='__main__':
     irc = TwitchIrcClient(username,oauth_token)            
     irc.messagespreader.add(messagelistener)
+    irc.whisperspreader.add(whisperlistener)
     irc.joinspreader.add(joinlistener)
     irc.partspreader.add(partlistener)
     irc.roomstatespreader.add(roomstatelistener)

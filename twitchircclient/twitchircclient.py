@@ -21,6 +21,9 @@ channel_regex='#(?P<channel>[a-zA-Z0-9_]+)'
 #Note: messages send by twitchnotify don't contain tags, an empty dict will be returned!
 privmsg_regex = re.compile('^(@'+tags_regex+' )?:'+username_regex+r'\.tmi\.twitch\.tv PRIVMSG '+channel_regex+' :(?P<message>.*)$')
 
+#Regex for incommig whisper-messages                                                       Notice that there is no '#' here
+whisper_regex = re.compile('^@'+tags_regex+' :'+username_regex+r'\.tmi\.twitch\.tv WHISPER [a-zA-Z0-9_]+ :(?P<message>.*)$')
+
 #Regex for user joining the channel:
 join_regex = re.compile('^:'+username_regex+r'\.tmi\.twitch\.tv JOIN '+channel_regex+' *$')
 
@@ -114,6 +117,7 @@ class TwitchIrcClient:
         self.userstatespreader = EventSpreader()
         self.globaluserstatespreader = EventSpreader()
         self.hostspreader = EventSpreader()
+        self.whisperspreader = EventSpreader()
 
     def create_connection(self):
         """
@@ -248,6 +252,12 @@ class TwitchIrcClient:
         """
         self.send('PRIVMSG #%s :%s\r\n' % (channel.lower(), message))
 
+    def sendwhisper(self, username, message):
+        """
+        Send a whisper-message to a user
+        """
+        self.sendprivmsg(self.username, '/w %s %s'%(username,message))
+
     def join(self, channel):
         """
         Join a channel to send messages to
@@ -309,6 +319,10 @@ class TwitchIrcClient:
             host_match = host_regex.match(data)
             if not host_match is None:
                 self._hostrecieved(host_match)
+                return
+            whisper_match = whisper_regex.match(data)
+            if not whisper_match is None:
+                self._whisperrecieved(whisper_match)
                 return
             pong_match = pong_regex.match(data)
             if not pong_match is None:
@@ -378,3 +392,9 @@ class TwitchIrcClient:
         target=match.group('target')
         viewers=match.group('viewers')
         self.hostspreader.spread(channel=channel, target=target, viewers=viewers)
+
+    def _whisperrecieved(self, match):
+        tags = _parse_tags(match.group('tags'))
+        username = match.group('username')
+        message = match.group('message')
+        self.whisperspreader.spread(username=username, message=message, tags=tags)
