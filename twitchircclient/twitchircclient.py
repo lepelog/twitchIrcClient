@@ -272,6 +272,27 @@ class TwitchIrcClient:
         self.joined_channels.discard(channel)
         self.send('PART #%s\r\n'%channel)
 
+    def timeout(self, channel, username, duration=600):
+        """
+        Time out a user in a channel with an optional duration in seconds (default: 600)
+        You have to be moderator in the channel
+        """
+        self.sendprivmsg(channel, '/timeout %s %s'%(username, duration))
+
+    def ban(self, channel, username):
+        """
+        Ban a user from the channel
+        You have to be moderator in the channel
+        """
+        self.sendprivmsg(channel, '/ban %s'%username)
+
+    def unban(self, channel, username):
+        """
+        Unan a user from the channel
+        You have to be moderator in the channel
+        """
+        self.sendprivmsg(channel, '/unban %s'%username)
+
     def _handle_incomming(self, data):
         if not len(data):
             return
