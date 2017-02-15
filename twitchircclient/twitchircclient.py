@@ -386,7 +386,7 @@ class TwitchIrcClient:
         #no resubcription message:
         if message is None:
             message = ''
-        self.noticespreader.spread(channel=channel, message=message, tags=tags)
+        self.usernoticespreader.spread(channel=channel, message=message, tags=tags)
 
     def _roomstaterecieved(self, match):
         tags = _parse_tags(match.group('tags'))
