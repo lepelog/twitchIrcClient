@@ -34,7 +34,7 @@ def hostlistener(channel, target, viewers):
     print('!HOST\n%s hosts %s with %s viewer(s)'%(channel, target,viewers))
 
 if __name__=='__main__':
-    irc = TwitchIrcClient(username,oauth_token)            
+    irc = TwitchIrcClient(username,oauth_token,debug=debug)
     irc.messagespreader.add(messagelistener)
     irc.whisperspreader.add(whisperlistener)
     irc.joinspreader.add(joinlistener)

@@ -96,7 +96,7 @@ class EventSpreader:
 
 class TwitchIrcClient:
 
-    def __init__(self, username, oauthtoken):
+    def __init__(self, username, oauthtoken, debug=False):
         """
         Constructor, start the connection witch create_connection
         Args:
@@ -106,6 +106,7 @@ class TwitchIrcClient:
         """
         self.username=username
         self.oauthtoken=oauthtoken
+        self.debug=debug
         self.joined_channels = set()
         self.messagespreader = EventSpreader()
         self.joinspreader = EventSpreader()
@@ -139,13 +140,16 @@ class TwitchIrcClient:
                 try:
                     #If messages are too big fetch them in multidata. The end of a message is always a newline
                     while not multidata or not multidata.endswith(b'\n'):
-                        if self._restarting:
+                        while self._restarting:
                             #during the restart of the socket, no messages can be recieved
                             continue
+                        if not self.go_on:
+                            break
                         #direct decoding might fail on long non-ascii messages
                         gotdata=self._sock.recv(1024)
                         if len(gotdata)==0:
                             #Connection is lost, lets reconnect!
+                            self.log('reconnecting because of empty data')
                             self.reconnect()
                         self._has_conversation=True
                         multidata+=gotdata
@@ -155,22 +159,27 @@ class TwitchIrcClient:
                         self._handle_incomming(data)
                 except KeyboardInterrupt:
                     self.go_on=False
+                except socket.timeout:
+                    #On timeout, restart the socket; if the chat is quiet, the twitch_pinger sends PING to twitch and forces a response
+                    self.log('reconnection because of socket-timeout!')
+                    self.reconnect()
                 except Exception as e:
-                    if self._restarting:
-                        pass #Restarting the socket causes an exception, which can be ignored
+                    if self._restarting or not self.go_on:
+                        pass #Restarting and stopping the socket causes an exception which can be ignored
                     else:
                         print('%s error occurred:%s'%(type(e),e))
         
         def twitch_pinger():
-            while self.go_on:
-                time.sleep(20)
-                if not self.go_on:
-                    break
-                if not self._has_conversation:
-                    #Try pingtest 2 times, first might fail even if connection is alive
-                    if not self.pingtest() or not self.pingtest():
-                        self.reconnect()
-                self._has_conversation=False
+            while True:
+                waiter=threading.Condition()
+                with waiter:
+                    #Waits or stops this thread if the program is stopped
+                    if waiter.wait_for(lambda: not self.go_on,15):
+                        break
+                    if not self._has_conversation:
+                        self.log('PINGCHECK')
+                        self.pingtest()
+                    self._has_conversation=False
             
         self.irc_reciever_thread = threading.Thread(target=reciever)
         self.irc_reciever_thread.start()
@@ -182,11 +191,8 @@ class TwitchIrcClient:
         self._begin_connection()
 
     def pingtest(self):
-        self._gotpong=False
-        tc=threading.Condition()
-        with tc:
-            self.send('PING me\r\n')
-            return tc.wait_for(lambda: self._gotpong,20)
+        """Send a ping to twitch"""
+        self.send('PING twitchircclient\r\n')
 
     def _kill_socket(self):
         """
@@ -201,10 +207,11 @@ class TwitchIrcClient:
         """
         self._sock = socket.socket()
         self._sock.connect(('irc.twitch.tv', 6667))
+        self._sock.settimeout(40)
             
     def _begin_connection(self):
         """
-        Start the conversation, requests capabilities and authenticate
+        Start the conversation, requests capabilities, authenticates and joins previously joined channels
         """
         self.send('CAP REQ :twitch.tv/membership\r\n')
         self.send('CAP REQ :twitch.tv/commands\r\n')
@@ -214,6 +221,7 @@ class TwitchIrcClient:
             self.join(channel)
             
     def reconnect(self):
+        """reconnects to the twitchIrc"""
         self._restarting=True
         self._kill_socket()
         self._connect()
@@ -222,7 +230,7 @@ class TwitchIrcClient:
         self._begin_connection()
         
     def shutdown(self):
-        self._restarting=True
+        """Shutdown the irc connection"""
         self.go_on=False
         self._kill_socket()
 
@@ -244,6 +252,8 @@ class TwitchIrcClient:
         Args:
             msg (str): The message to be send
         """
+        while self._restarting:
+            continue
         self._sock.sendall(msg.encode('utf-8'))
 
     def sendprivmsg(self, channel, message):
@@ -345,11 +355,7 @@ class TwitchIrcClient:
             if not whisper_match is None:
                 self._whisperrecieved(whisper_match)
                 return
-            pong_match = pong_regex.match(data)
-            if not pong_match is None:
-                self._gotpong=True
-                return
-            #print('"'+data+'"')
+            self.log('"'+data+'"')
 
     def _messagerecieved(self, match):
         #Twtichnotify doesnt't send tags, empty dicct is returned cause it's easier to deal with
@@ -419,3 +425,7 @@ class TwitchIrcClient:
         username = match.group('username')
         message = match.group('message')
         self.whisperspreader.spread(username=username, message=message, tags=tags)
+
+    def log(self, msg):
+        if self.debug:
+            print(msg)
