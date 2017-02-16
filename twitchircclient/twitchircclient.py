@@ -96,17 +96,23 @@ class EventSpreader:
 
 class TwitchIrcClient:
 
-    def __init__(self, username, oauthtoken, debug=False):
+    def __init__(self, username, oauthtoken, socket_timeout=40, ping_check_secs=15, debug=False):
         """
         Constructor, start the connection witch create_connection
         Args:
             username (str): Your username to use for logging onto twitch
             oauthtoken (str): Your oauthtoken, retrieved from twitchTv
                 See README.md for further information about oauth
+            socket_timeout (int)(seconds): set timeout for the socket in seconds (default: 40)
+            ping_check_secs (int)(seonds): interval a ping is sent to twitch if there was no conversation (default: 15)
+                you can turn this off by setting the value to 0
+                to check if the connection is still alive
         """
         self.username=username
         self.oauthtoken=oauthtoken
         self.debug=debug
+        self._socket_timeout=socket_timeout
+        self.ping_check_secs=ping_check_secs
         self.joined_channels = set()
         self.messagespreader = EventSpreader()
         self.joinspreader = EventSpreader()
@@ -165,7 +171,7 @@ class TwitchIrcClient:
                     self.reconnect()
                 except Exception as e:
                     if self._restarting or not self.go_on:
-                        pass #Restarting and stopping the socket causes an exception which can be ignored
+                        self.log('Error during restart: %s'%e) #Restarting and stopping the socket causes an exception which can be ignored
                     else:
                         print('%s error occurred:%s'%(type(e),e))
         
@@ -173,19 +179,19 @@ class TwitchIrcClient:
             while True:
                 waiter=threading.Condition()
                 with waiter:
-                    #Waits or stops this thread if the program is stopped
-                    if waiter.wait_for(lambda: not self.go_on,15):
+                    #Waits for 15 seconds or stops this thread if the program is stopped
+                    if waiter.wait_for(lambda: not self.go_on,self.ping_check_secs):
                         break
                     if not self._has_conversation:
                         self.log('PINGCHECK')
                         self.pingtest()
                     self._has_conversation=False
             
-        self.irc_reciever_thread = threading.Thread(target=reciever)
-        self.irc_reciever_thread.start()
+        self._irc_reciever_thread = threading.Thread(target=reciever)
+        self._irc_reciever_thread.start()
         
-        self.twitch_pinger_thread = threading.Thread(target=twitch_pinger)
-        self.twitch_pinger_thread.start()
+        self._twitch_pinger_thread = threading.Thread(target=twitch_pinger)
+        self._twitch_pinger_thread.start()
         
         #Set up authentication, tags, etc.
         self._begin_connection()
@@ -194,32 +200,6 @@ class TwitchIrcClient:
         """Send a ping to twitch"""
         self.send('PING twitchircclient\r\n')
 
-    def _kill_socket(self):
-        """
-        Shutdown the socket, it can not longer be used
-        """
-        self._sock.shutdown(socket.SHUT_RDWR)
-        self._sock.close()
-
-    def _connect(self):
-        """
-        Connect a new socket to the irc
-        """
-        self._sock = socket.socket()
-        self._sock.connect(('irc.twitch.tv', 6667))
-        self._sock.settimeout(40)
-            
-    def _begin_connection(self):
-        """
-        Start the conversation, requests capabilities, authenticates and joins previously joined channels
-        """
-        self.send('CAP REQ :twitch.tv/membership\r\n')
-        self.send('CAP REQ :twitch.tv/commands\r\n')
-        self.send('CAP REQ :twitch.tv/tags\r\n')
-        self.authenticate(self.username, self.oauthtoken)
-        for channel in self.joined_channels:
-            self.join(channel)
-            
     def reconnect(self):
         """reconnects to the twitchIrc"""
         self._restarting=True
@@ -228,7 +208,7 @@ class TwitchIrcClient:
         self._restarting=False
         time.sleep(1)
         self._begin_connection()
-        
+
     def shutdown(self):
         """Shutdown the irc connection"""
         self.go_on=False
@@ -302,6 +282,52 @@ class TwitchIrcClient:
         You have to be moderator in the channel
         """
         self.sendprivmsg(channel, '/unban %s'%username)
+        
+    @property
+    def socket_timeout(self):
+        return self._socket_timeout
+
+    @socket_timeout.setter
+    def socket_timeout(self,to):
+        if to<0:
+            raise AttributeError("%s is invalid: socket_timeout can't be below 0!"%to)
+        elif to==0:
+            self._sock.settimeout(None)
+        else:
+            self._sock.settimeout(to)
+        self._socket_timeout=to
+
+    def log(self, msg):
+        """logs debug messages to the console"""
+        if self.debug:
+            print(msg)
+
+    #Begin "private" methods
+    def _kill_socket(self):
+        """
+        Shutdown the socket, it can not longer be used
+        """
+        self._sock.shutdown(socket.SHUT_RDWR)
+        self._sock.close()
+
+    def _connect(self):
+        """
+        Connect a new socket to the irc
+        """
+        self._sock = socket.socket()
+        self._sock.connect(('irc.twitch.tv', 6667))
+        self._sock.settimeout(self.socket_timeout)
+
+    def _begin_connection(self):
+        """
+        Start the conversation, requests capabilities, authenticates and joins previously joined channels
+        """
+        self.send('CAP REQ :twitch.tv/membership\r\n')
+        self.send('CAP REQ :twitch.tv/commands\r\n')
+        self.send('CAP REQ :twitch.tv/tags\r\n')
+        self.authenticate(self.username, self.oauthtoken)
+        for channel in self.joined_channels:
+            self.join(channel)
 
     def _handle_incomming(self, data):
         if not len(data):
@@ -425,7 +451,3 @@ class TwitchIrcClient:
         username = match.group('username')
         message = match.group('message')
         self.whisperspreader.spread(username=username, message=message, tags=tags)
-
-    def log(self, msg):
-        if self.debug:
-            print(msg)
