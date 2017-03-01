@@ -135,7 +135,6 @@ class TwitchIrcClient:
         def reciever():
             self.go_on=True
             self._restarting=False
-            self._has_conversation=False
             while self.go_on:
                 #Messages from the socket are raw bytes
                 multidata = bytes()
@@ -153,7 +152,6 @@ class TwitchIrcClient:
                             #Connection is lost, lets reconnect!
                             self.log('reconnecting because of empty data')
                             self.reconnect()
-                        self._has_conversation=True
                         multidata+=gotdata
                     #Twitch can send more messages than one at once, but they are linebreak-seperated
                     decoded = multidata.decode('utf-8')
@@ -162,7 +160,7 @@ class TwitchIrcClient:
                 except KeyboardInterrupt:
                     self.go_on=False
                 except socket.timeout:
-                    #On timeout, restart the socket; if the chat is quiet, the twitch_pinger sends PING to twitch and forces a response
+                    #On timeout, restart the socket;
                     self.log('reconnection because of socket-timeout!')
                     self.reconnect()
                 except Exception as e:
