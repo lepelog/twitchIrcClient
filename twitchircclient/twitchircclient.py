@@ -51,6 +51,12 @@ globaluserstate_regex = re.compile('^@'+tags_regex+r' :tmi\.twitch\.tv GLOBALUSE
 #Regex for hosting
 host_regex = re.compile(r'^:tmi\.twitch\.tv HOSTTARGET '+channel_regex+' :(?P<target>-|[a-zA-Z0-9_]+) (?P<viewers>[0-9]+)$')
 
+#Regex for gaining operator status in a channel
+gain_operator_regex = re.compile('^:jtv MODE '+channel_regex+ r' \+o (?P<username>[a-zA-Z0-9_]+)$')
+
+#Regex for loosing operator status in a channel
+loose_operator_regex = re.compile('^:jtv MODE '+channel_regex+ r' -o (?P<username>[a-zA-Z0-9_]+)$')
+
 #Regex for PONG from twitch
 pong_regex = re.compile('^:tmi.twitch.tv PONG tmi.twitch.tv :(?P<message>.*)$')
 
@@ -121,6 +127,8 @@ class TwitchIrcClient:
         self.globaluserstatespreader = EventSpreader()
         self.hostspreader = EventSpreader()
         self.whisperspreader = EventSpreader()
+        self.gainoperatorspreader = EventSpreader()
+        self.looseoperatorspreader = EventSpreader()
 
     def create_connection(self):
         """
@@ -360,6 +368,14 @@ class TwitchIrcClient:
             if not whisper_match is None:
                 self._whisperrecieved(whisper_match)
                 return
+            gain_operator_match = gain_operator_regex.match(data)
+            if not gain_operator_match is None:
+                self._gainoperatorreciever(gain_operator_match)
+                return
+            loose_operator_match = loose_operator_regex.match(data)
+            if not loose_operator_match is None:
+                self._looseoperatorreciever(loose_operator_match)
+                return
             self.log('"'+data+'"')
 
     def _messagerecieved(self, match):
@@ -430,3 +446,13 @@ class TwitchIrcClient:
         username = match.group('username')
         message = match.group('message')
         self.whisperspreader.spread(username=username, message=message, tags=tags)
+
+    def _gainoperatorreciever(self, match):
+        channel = match.group('channel')
+        username = match.group('username')
+        self.gainoperatorspreader.spread(channel=channel, username=username)
+
+    def _looseoperatorreciever(self, match):
+        channel = match.group('channel')
+        username = match.group('username')
+        self.looseoperatorspreader.spread(channel=channel, username=username)

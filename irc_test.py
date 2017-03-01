@@ -33,6 +33,12 @@ def userstatelistener(channel, tags):
 def hostlistener(channel, target, viewers):
     print('!HOST\n%s hosts %s with %s viewer(s)'%(channel, target,viewers))
 
+def gainoperatorlistener(channel, username):
+    print('<%s gained operator in %s>'%(username, channel))
+
+def looseoperatorlistener(channel, username):
+    print('<%s lost operator in %s>'%(username, channel))
+
 if __name__=='__main__':
     irc = TwitchIrcClient(username,oauth_token,debug=debug)
     irc.messagespreader.add(messagelistener)
@@ -45,5 +51,7 @@ if __name__=='__main__':
     irc.userstatespreader.add(userstatelistener)
     irc.globaluserstatespreader.add(globaluserstatelistener)
     irc.hostspreader.add(hostlistener)
+    irc.gainoperatorspreader.add(gainoperatorlistener)
+    irc.looseoperatorspreader.add(looseoperatorlistener)
     irc.create_connection()
     irc.join(channel)
