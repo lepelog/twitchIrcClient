@@ -96,23 +96,19 @@ class EventSpreader:
 
 class TwitchIrcClient:
 
-    def __init__(self, username, oauthtoken, socket_timeout=40, ping_check_secs=15, debug=False):
+    def __init__(self, username, oauthtoken, socket_timeout=None, debug=False):
         """
         Constructor, start the connection witch create_connection
         Args:
             username (str): Your username to use for logging onto twitch
             oauthtoken (str): Your oauthtoken, retrieved from twitchTv
                 See README.md for further information about oauth
-            socket_timeout (int)(seconds): set timeout for the socket in seconds (default: 40)
-            ping_check_secs (int)(seonds): interval a ping is sent to twitch if there was no conversation (default: 15)
-                you can turn this off by setting the value to 0
-                to check if the connection is still alive
+            socket_timeout (int)(seconds): set timeout for the socket in seconds (default: No timeout)
         """
         self.username=username
         self.oauthtoken=oauthtoken
         self.debug=debug
         self._socket_timeout=socket_timeout
-        self.ping_check_secs=ping_check_secs
         self.joined_channels = set()
         self.messagespreader = EventSpreader()
         self.joinspreader = EventSpreader()
@@ -175,24 +171,9 @@ class TwitchIrcClient:
                     else:
                         print('%s error occurred:%s'%(type(e),e))
         
-        def twitch_pinger():
-            while True:
-                waiter=threading.Condition()
-                with waiter:
-                    #Waits for 15 seconds or stops this thread if the program is stopped
-                    if waiter.wait_for(lambda: not self.go_on,self.ping_check_secs):
-                        break
-                    if not self._has_conversation:
-                        self.log('PINGCHECK')
-                        self.pingtest()
-                    self._has_conversation=False
-            
         self._irc_reciever_thread = threading.Thread(target=reciever)
         self._irc_reciever_thread.start()
-        
-        self._twitch_pinger_thread = threading.Thread(target=twitch_pinger)
-        self._twitch_pinger_thread.start()
-        
+
         #Set up authentication, tags, etc.
         self._begin_connection()
 
@@ -289,10 +270,10 @@ class TwitchIrcClient:
 
     @socket_timeout.setter
     def socket_timeout(self,to):
-        if to<0:
-            raise AttributeError("%s is invalid: socket_timeout can't be below 0!"%to)
-        elif to==0:
+        if to is None:
             self._sock.settimeout(None)
+        elif to<0:
+            raise AttributeError("%s is invalid: socket_timeout can't be below 0!"%to)
         else:
             self._sock.settimeout(to)
         self._socket_timeout=to
@@ -334,7 +315,7 @@ class TwitchIrcClient:
             return
         elif data.startswith('PING'):
             #Respond to PING, looses connection otherwise
-            self.send(data.replace('PING','PONG'))
+            self.send(data.replace('PING','PONG')+'\r\n')
         else:
             #Try to match regular expressions!
             msg_match = privmsg_regex.match(data)
