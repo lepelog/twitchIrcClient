@@ -46,6 +46,12 @@ irc.join('channel')
 
 #Send a message to a channel
 irc.sendprivmsg('channel','Kappa')
+
+#Stop the listener from recieving messages
+irc.messagespreader.remove(messagelistener)
+
+#Send a whisper a user
+irc.sendwhisper('username','OpieOP')
 ```
 
 ### Notes about oauth-token
