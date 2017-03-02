@@ -91,4 +91,10 @@ Name of the `EventSpreader`s and their signature:
 **hostspreader**: Used if the joined channel starts/stops hosting another channel:  
 `channel`, `target`, `viewers`
 
+**gainoperatorspreader**: Used if a mod joins a channel:  
+`channel, username`
+
+**looseoperatorspreader**: Used if a mod leaves a channel:  
+`channel, username`
+
 See [Twtich IRC documentation](https://github.com/justintv/Twitch-API/blob/master/IRC.md) for more information.
