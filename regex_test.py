@@ -13,7 +13,7 @@ class ExpectedException(Exception):
 class MockIrcClient(TwitchIrcClient):
     
     def __init__(self):
-        super().__init__('','')
+        super().__init__('twitch_username','')
     
     def send(self, msg):
         raise ExpectedException(msg)
@@ -192,7 +192,7 @@ class RegexTest(unittest.TestCase):
         try:
             self.irc._handle_incomming(msg)
         except ExpectedException as e:
-            self.assertEqual(e.message,'PONG tmi.twitch.tv')
+            self.assertEqual(e.message,'PONG tmi.twitch.tv\r\n')
             
     def testHOST1(self):
         hostlistener=listenerbuilder(self, channel='hosting_channel', target='target_channel', viewers='42')
@@ -224,3 +224,15 @@ class RegexTest(unittest.TestCase):
             assert self.handled_message
         finally:
             self.irc.whisperspreader.remove(whisperlistener)
+
+    def test_names_list(self):
+        channel = 'channel'
+        names = ['twitch_username']
+        nameslistlistener=listenerbuilder(self, channel=channel, names=names)
+        self.irc.nameslistspreader.add(nameslistlistener)
+        msg = ':twitch_username.tmi.twitch.tv 353 twitch_username = #channel :twitch_username'
+        try:
+            self.irc._handle_incomming(msg)
+            assert self.handled_message
+        finally:
+            self.irc.nameslistspreader.remove(nameslistlistener)

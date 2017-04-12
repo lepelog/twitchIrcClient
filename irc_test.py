@@ -39,6 +39,9 @@ def gainoperatorlistener(channel, username):
 def looseoperatorlistener(channel, username):
     print('<%s lost operator in %s>'%(username, channel))
 
+def nameslistlistener(channel, names):
+    print('NAMES IN %s: %s'%(channel,names))
+
 if __name__=='__main__':
     irc = TwitchIrcClient(username,oauth_token,debug=debug)
     irc.messagespreader.add(messagelistener)
@@ -53,5 +56,6 @@ if __name__=='__main__':
     irc.hostspreader.add(hostlistener)
     irc.gainoperatorspreader.add(gainoperatorlistener)
     irc.looseoperatorspreader.add(looseoperatorlistener)
+    irc.nameslistspreader.add(nameslistlistener)
     irc.create_connection()
     irc.join(channel)

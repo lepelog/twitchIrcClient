@@ -110,6 +110,7 @@ class TwitchIrcClient:
             oauthtoken (str): Your oauthtoken, retrieved from twitchTv
                 See README.md for further information about oauth
             socket_timeout (int)(seconds): set timeout for the socket in seconds (default: No timeout)
+            debug (bool): Whether or not debug information should be printed out (default: False)
         """
         self.username=username
         self.oauthtoken=oauthtoken
@@ -129,6 +130,10 @@ class TwitchIrcClient:
         self.whisperspreader = EventSpreader()
         self.gainoperatorspreader = EventSpreader()
         self.looseoperatorspreader = EventSpreader()
+        self.nameslistspreader = EventSpreader()
+        
+        #Regex for names list recieved
+        self.nameslist_regex = re.compile('^:{login}.tmi.twitch.tv 353 {login} = '.format(login=self.username)+channel_regex+' :(?P<names>[a-zA-Z0-9_ ]+)$')
 
     def create_connection(self):
         """
@@ -376,6 +381,11 @@ class TwitchIrcClient:
             if not loose_operator_match is None:
                 self._looseoperatorreciever(loose_operator_match)
                 return
+            #This regex requires self because it has the username in it 
+            nameslist_match = self.nameslist_regex.match(data)
+            if not nameslist_match is None:
+                self._nameslistreciever(nameslist_match)
+                return
             self.log('"'+data+'"')
 
     def _messagerecieved(self, match):
@@ -456,3 +466,9 @@ class TwitchIrcClient:
         channel = match.group('channel')
         username = match.group('username')
         self.looseoperatorspreader.spread(channel=channel, username=username)
+
+    def _nameslistreciever(self, match):
+        raw_names = match.group('names')
+        channel = match.group('channel')
+        names = raw_names.split()
+        self.nameslistspreader.spread(channel=channel, names=names)
