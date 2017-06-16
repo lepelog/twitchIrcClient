@@ -19,6 +19,7 @@ To uninstall this package with pip run `pip3 uninstall twitchircclient`
 - Reading/Sending messages
 - Catching Events such as people joining/parting, roomstate changes, twitch notices etc.
 - Sending/Recieving Whisper-messages
+- Mocked version for testing purposes
 
 ## Usage
 Import the TwitchIrcClient from twitchircclient and start the connection. Example:
@@ -108,3 +109,23 @@ Name of the `EventSpreader`s and their signature:
 `channel, names`
 
 See [Twtich IRC documentation](https://github.com/justintv/Twitch-API/blob/master/IRC.md) for more information.
+
+# MockIrcClient
+```python
+from twitchircclient import MockIrcClient
+```
+Has all functions of the real ircClient but doesn't connect to twitch at all, for testing purposes, example:
+
+```python
+irc = MockIrcClient('test', None, debug=True)
+
+def reciever(msg):
+    assert msg=='JOIN #me'
+#Set a reciever to handle outgoing messages
+irc.set_send_reciever(reciever)
+
+irc.join('me')
+
+#Send a message from 'twitch'
+irc.mock_msg_incomming('PING')
+```
