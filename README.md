@@ -127,5 +127,8 @@ irc.set_send_reciever(reciever)
 irc.join('me')
 
 #Send a message from 'twitch'
-irc.mock_msg_incomming('PING')
+irc.mock_msg_incomming(irc.generate_mock_privmsg('channel','usenname','message',{'tag':'tg','sdf':'sdf'}))
+
+#Send a whisper from 'twitch'
+irc.mock_msg_incomming(irc.generate_mock_whisper('usenname','message',{'tag':'tg','sdf':'sdf'}))
 ```
