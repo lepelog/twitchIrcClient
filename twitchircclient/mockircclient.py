@@ -28,13 +28,14 @@ class MockIrcClient(TwitchIrcClient):
         self.send_reciever=reciever
 
     @staticmethod
-    def generate_mock_privmsg(channel, username, message, tags={}):
+    def generate_mock_privmsg(channel='channel', username='username', message='message', tags={}):
         """
         Generates a string that looks like a privmsg from twitch
+        All params have defaults so you can just supply the arguments you want
         Params:
-            channel (str): Channel where the message was sent in
-            username (str): User who sent the message
-            message (str): The message that was sent
+            channel (str,optional): Channel where the message was sent in
+            username (str,optional): User who sent the message
+            message (str,optional): The message that was sent
             tags (ditc, optional): Tags sent with the message
         Returns:
             (str): A privmsg command
@@ -46,12 +47,13 @@ class MockIrcClient(TwitchIrcClient):
         return '@{tagstring} :{username}!{username}@{username}.tmi.twitch.tv PRIVMSG #{channel} :{message}'.format(tagstring=tagstring, username=username, message=message, channel=channel)
     
     @staticmethod
-    def generate_mock_whisper(username, message, tags={}):
+    def generate_mock_whisper(username='username', message='message', tags={}):
         """
         Generates a string that looks like a whisper from twitch
+        All params have defaults so you can just supply the arguments you want
         Params:
-            username (str): User who sent the message
-            message (str): The message that was sent
+            username (str, optional): User who sent the message
+            message (str, optional): The message that was sent
             tags (ditc, optional): Tags sent with the message
         Returns:
             (str): A whisper command
