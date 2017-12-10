@@ -81,7 +81,7 @@ Name of the `EventSpreader`s and their signature:
 **roomstatespreader**: Used if you join a channel or if the roomstate changes in a channel you are joined in:  
 `channel, tags`
 
-**usernoticespreader**: Used if  a user resubscribes:  
+**usernoticespreader**: Used if  a user (re)subscribes or raids:  
 `channel, tags, message`
 
 **noticespreader**: Used if twitch sends a notification:  
@@ -108,7 +108,8 @@ Name of the `EventSpreader`s and their signature:
 **nameslistspreader**: Used when twitch sends all users (list `names`) in the channel after joining:  
 `channel, names`
 
-See [Twtich IRC documentation](https://github.com/justintv/Twitch-API/blob/master/IRC.md) for more information.
+See [Twtich IRC documentation](https://github.com/justintv/Twitch-API/blob/master/IRC.md) for more information. For the subgifts (since twitchs is too lazy to document that), there are some other tags in the USERNOTICE event:  
+'display-name' and 'login' are from the person that gifted the sub, 'msg-id': 'subgift', 'msg-param-recipient-display-name', 'msg-param-recipient-id', 'msg-param-recipient-user-name' are the values for the person that got the sub gifted.
 
 # MockIrcClient
 ```python

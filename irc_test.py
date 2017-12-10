@@ -20,6 +20,9 @@ def roomstatelistener(channel, tags):
 
 def noticelistener(channel, tags, message):
     print('!NOTICE #%s\n%s\n%s'%(channel,tags,message))
+
+def usernoticelistener(channel, message, tags):
+    print('!USERNOTICE #%s\n%s\n%s'%(channel, tags, message))
     
 def clearchatlistener(channel, tags, username):
     print('!CLEARCHAT from %s in %s\n%s'%(username,channel,tags))
@@ -50,6 +53,7 @@ if __name__=='__main__':
     irc.partspreader.add(partlistener)
     irc.roomstatespreader.add(roomstatelistener)
     irc.noticespreader.add(noticelistener)
+    irc.usernoticespreader.add(usernoticelistener)
     irc.clearchatspreader.add(clearchatlistener)
     irc.userstatespreader.add(userstatelistener)
     irc.globaluserstatespreader.add(globaluserstatelistener)
