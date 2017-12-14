@@ -3,6 +3,7 @@ Twitch Client Library
 """
 
 import socket
+import ssl
 import threading
 import re
 import time
@@ -102,18 +103,24 @@ class EventSpreader:
 
 class TwitchIrcClient:
 
-    def __init__(self, username, oauthtoken, socket_timeout=None, debug=False):
+    def __init__(self, username, oauthtoken, irc_hostname='irc.chat.twitch.tv', irc_port=443, socket_timeout=None, ssl_context={}, debug=False):
         """
         Constructor, start the connection witch create_connection
         Args:
             username (str): Your username to use for logging onto twitch
             oauthtoken (str): Your oauthtoken, retrieved from twitchTv
                 See README.md for further information about oauth
-            socket_timeout (int)(seconds): set timeout for the socket in seconds (default: No timeout)
-            debug (bool): Whether or not debug information should be printed out (default: False)
+            irc_hostname (str)(optional): Hostname of the twitch irc server (default: irc.chat.twitch.tv)
+            irc_port (int)(optional): Port used to connect to the twitch irc server (default: 443)
+            socket_timeout (int)(optional): set timeout for the socket in seconds (default: No timeout)
+            ssl_context (dict)(optional): set params for the SSLContext used for the socket, otherwise the defaults are used
+            debug (bool)(optional): Whether or not debug information should be printed out (default: False)
         """
         self.username=username
         self.oauthtoken=oauthtoken
+        self.irc_hostname=irc_hostname
+        self.irc_port=irc_port
+        self.ssl_context=ssl_context
         self.debug=debug
         self._socket_timeout=socket_timeout
         self.joined_channels = set()
@@ -306,8 +313,11 @@ class TwitchIrcClient:
         """
         Connect a new socket to the irc
         """
-        self._sock = socket.socket()
-        self._sock.connect(('irc.twitch.tv', 6667))
+        ircsocket = socket.socket()
+        #get default context and apply given params to it
+        sslcontext=ssl.SSLContext(**self.ssl_context)
+        self._sock=sslcontext.wrap_socket(ircsocket)
+        self._sock.connect((self.irc_hostname, self.irc_port))
         self._sock.settimeout(self.socket_timeout)
 
     def _begin_connection(self):
